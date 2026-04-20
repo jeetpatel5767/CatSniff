@@ -8,6 +8,7 @@ import ipinfo_client
 import abuseipdb_client
 
 from domain import run_domain_recon
+from scoring.engine import engine
 from config import (
     detect_input_type, refang, clean_domain, is_ip_address,
     VIRUSTOTAL_API_KEY, IPINFO_API_KEY, ABUSEIPDB_API_KEY,
@@ -17,6 +18,7 @@ from display import (
     print_kv, print_kv_highlight, print_table, print_analysis_stats,
     print_success, print_error, print_warning, print_info,
     print_scanning, print_api_status, print_complete, print_ip_cascade_header,
+    print_threat_score,
     G, R, C, Y, M, W, DG, LR, LC, B, D, RST,
 )
 
@@ -389,6 +391,16 @@ def analyze_ip(ip_address: str):
     abuse_data = abuseipdb_client.search_ip(ip_address)
     display_abuseipdb(abuse_data)
 
+    # ML Scoring
+    context = {
+        'vt': vt_data,
+        'ipinfo': ipinfo_data,
+        'abuse': abuse_data,
+        'recon': {'ip': ip_address}
+    }
+    risk_result = engine.get_risk_score(context)
+    print_threat_score(risk_result)
+
 
 # ==================== DOMAIN ANALYSIS FLOW ====================
 def analyze_domain_flow(domain: str):
@@ -460,6 +472,16 @@ def analyze_domain_flow(domain: str):
             print_section_header(f"AbuseIPDB — {ip}", "🚩")
             abuse_data = abuseipdb_client.search_ip(ip)
             display_abuseipdb(abuse_data)
+
+            # ML Scoring (per cascaded IP)
+            context = {
+                'vt': vt_data if 'vt_data' in locals() else None,
+                'ipinfo': ipinfo_data,
+                'abuse': abuse_data,
+                'recon': {'ip': ip}
+            }
+            risk_result = engine.get_risk_score(context)
+            print_threat_score(risk_result)
     else:
         print_warning("No resolved IPs found — IPInfo and AbuseIPDB checks skipped.")
 
@@ -477,6 +499,10 @@ def analyze_url_flow(url: str):
     print_section_header("VirusTotal — URL Analysis", "🔬")
     vt_data = virustotal_client.search_url(url)
     display_vt_url(vt_data)
+
+    # ML Scoring for URL
+    risk_result = engine.get_risk_score({'vt': vt_data})
+    print_threat_score(risk_result)
 
 
     # Extract domain and cascade
@@ -501,6 +527,10 @@ def analyze_hash_flow(file_hash: str):
     vt_data = virustotal_client.search_file_hash(file_hash)
     display_vt_file_hash(vt_data)
 
+    # ML Scoring for File
+    risk_result = engine.get_risk_score({'vt': vt_data})
+    print_threat_score(risk_result)
+
 
 
     # Contacted IPs
@@ -524,6 +554,16 @@ def analyze_hash_flow(file_hash: str):
                 print_section_header(f"AbuseIPDB — {ip}", "🚩")
                 abuse_data = abuseipdb_client.search_ip(ip)
                 display_abuseipdb(abuse_data)
+
+                # ML Scoring (per contacted IP)
+                context = {
+                    'vt': item.get('last_analysis_stats'), # Note: item in contacted_ips has stats
+                    'ipinfo': ipinfo_data,
+                    'abuse': abuse_data,
+                    'recon': {'ip': ip}
+                }
+                risk_result = engine.get_risk_score(context)
+                print_threat_score(risk_result)
 
     # Contacted Domains
     contacted_domains = virustotal_client.get_file_contacted_domains(file_hash)

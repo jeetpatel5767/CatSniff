@@ -5,3 +5,6 @@ ipwhois
 cryptography
 virustotal-python
 colorama
+scikit-learn
+pandas
+joblib

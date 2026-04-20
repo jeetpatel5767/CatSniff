@@ -231,3 +231,39 @@ def print_ip_cascade_header(ip: str, source: str = ""):
     src = f" (from {source})" if source else ""
     print(f"\n{M}{B}  ⟩⟩⟩ Cascading IP Analysis{src}: {Y}{ip}{RST}")
     print(f"  {D}{M}{'─' * 62}{RST}")
+
+
+# ==================== ML THREAT GAUGE ====================
+def print_threat_score(result: dict):
+    """Print the final ML-calculated threat score with a visual gauge."""
+    score = result.get('score', 0)
+    level = result.get('level', 'UNKNOWN')
+    color_name = result.get('color', 'WHITE')
+    method = result.get('method', 'Unknown')
+    
+    # Map color name to colorama
+    color_map = {
+        'RED': LR,
+        'YELLOW': Y,
+        'CYAN': LC,
+        'GREEN': DG,
+        'WHITE': W
+    }
+    clr = color_map.get(color_name, W)
+    
+    width = 62
+    print(f"\n{clr}{B}╔{'═' * (width-2)}╗{RST}")
+    print(f"{clr}{B}║{RST}  {W}{B}ML RISK ASSESSMENT VERDICT{RST}{' ' * (width - 31)}{clr}{B}║{RST}")
+    
+    # Gauge
+    bar_width = 40
+    filled = int((score / 100) * bar_width)
+    empty = bar_width - filled
+    
+    # Gradient bar look
+    bar = f"{clr}{'█' * filled}{D}{W}{'░' * empty}{RST}"
+    
+    print(f"{clr}{B}║{RST}  {W}Score: {clr}{B}{score:<5}/ 100{RST}  [{bar}]  {clr}{B}║{RST}")
+    print(f"{clr}{B}║{RST}  {W}Level: {clr}{B}{level:<47}{RST} {clr}{B}║{RST}")
+    print(f"{clr}{B}║{RST}  {D}Method: {method:<46}{RST} {clr}{B}║{RST}")
+    print(f"{clr}{B}╚{'═' * (width-2)}╝{RST}\n")
